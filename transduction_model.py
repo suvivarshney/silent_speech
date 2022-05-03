@@ -19,12 +19,12 @@ from absl import flags
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('model_size', 768, 'number of hidden dimensions')
 flags.DEFINE_integer('num_layers', 6, 'number of layers')
-flags.DEFINE_integer('batch_size', 32, 'training batch size')
+flags.DEFINE_integer('batch_size', 1, 'training batch size')
 flags.DEFINE_float('learning_rate', 1e-3, 'learning rate')
 flags.DEFINE_integer('learning_rate_patience', 5, 'learning rate decay patience')
 flags.DEFINE_integer('learning_rate_warmup', 500, 'steps of linear warmup')
 flags.DEFINE_string('start_training_from', None, 'start training from this model')
-flags.DEFINE_float('data_size_fraction', 1.0, 'fraction of training data to use')
+flags.DEFINE_float('data_size_fraction', 1, 'fraction of training data to use')
 flags.DEFINE_boolean('no_session_embed', False, "don't use a session embedding")
 flags.DEFINE_float('phoneme_loss_weight', 0.1, 'weight of auxiliary phoneme prediction loss')
 flags.DEFINE_float('l2', 1e-7, 'weight decay')
@@ -100,7 +100,7 @@ class Model(nn.Module):
 def test(model, testset, device):
     model.eval()
 
-    dataloader = torch.utils.data.DataLoader(testset, batch_size=32, collate_fn=testset.collate_fixed_length)
+    dataloader = torch.utils.data.DataLoader(testset, batch_size=1, collate_fn=testset.collate_fixed_length)
     losses = []
     accuracies = []
     phoneme_confusion = np.zeros((len(phoneme_inventory),len(phoneme_inventory)))
@@ -208,7 +208,7 @@ def train_model(trainset, devset, device, save_sound_outputs=True, n_epochs=80):
         training_subset = trainset
     else:
         training_subset = torch.utils.data.Subset(trainset, list(range(int(len(trainset)*FLAGS.data_size_fraction))))
-    dataloader = torch.utils.data.DataLoader(training_subset, pin_memory=(device=='cuda'), collate_fn=devset.collate_fixed_length, num_workers=8, batch_sampler=SizeAwareSampler(trainset, 256000))
+    dataloader = torch.utils.data.DataLoader(training_subset, pin_memory=(device=='cuda'), collate_fn=devset.collate_fixed_length, num_workers=1, batch_sampler=SizeAwareSampler(trainset, 64000))
 
     n_phones = len(phoneme_inventory)
     model = Model(devset.num_features, devset.num_speech_features, n_phones, devset.num_sessions).to(device)
